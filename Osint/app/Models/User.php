@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'name', 'username', 'email', 'password',
@@ -23,6 +24,7 @@ class User extends Authenticatable
     protected $casts = [
         'is_active'     => 'boolean',
         'last_login_at' => 'datetime',
+        'api_token'     => 'encrypted',
     ];
 
     public function searchLogs()

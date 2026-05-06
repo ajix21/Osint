@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Log;
 
 class SearchController extends Controller
 {
-    private const API_URL = 'https://leakosintapi.com/';
-
     public function index()
     {
         return view('search.index');
@@ -49,11 +47,10 @@ class SearchController extends Controller
         try {
             $response = Http::timeout(30)
                 ->withHeaders(['Content-Type' => 'application/json'])
-                ->post(self::API_URL, $payload);
+                ->post(config('leakosint.api_url'), $payload);
 
             $data = $response->json();
 
-            // Log the search
             SearchLog::create([
                 'user_id'     => $user->id,
                 'query'       => $request->input('request'),
@@ -79,7 +76,7 @@ class SearchController extends Controller
     public function history()
     {
         $logs = SearchLog::with('user')
-            ->when(auth()->user()->role !== 'admin', function ($q) {
+            ->when(!auth()->user()->isAdmin(), function ($q) {
                 $q->where('user_id', auth()->id());
             })
             ->latest()

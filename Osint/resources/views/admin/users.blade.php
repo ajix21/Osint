@@ -49,7 +49,10 @@
             <div style="display:flex;gap:6px;">
               <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-ghost btn-sm">Edit</a>
               @if($user->id !== auth()->id())
-              <form method="POST" action="{{ route('admin.users.delete', $user->id) }}" onsubmit="return confirm('Hapus user {{ $user->username }}?')">
+              <form method="POST"
+                    action="{{ route('admin.users.destroy', $user->id) }}"
+                    class="delete-user-form"
+                    data-username="{{ $user->username }}">
                 @csrf @method('DELETE')
                 <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
               </form>
@@ -63,3 +66,15 @@
   </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.querySelectorAll('.delete-user-form').forEach(function(form) {
+  form.addEventListener('submit', function(e) {
+    if (!confirm('Hapus user ' + form.dataset.username + '?')) {
+      e.preventDefault();
+    }
+  });
+});
+</script>
+@endpush

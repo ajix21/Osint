@@ -13,17 +13,17 @@ Route::get('/', function () {
 // Guest-only routes
 Route::middleware('guest')->group(function () {
     Route::get('/login',  [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 });
 
 // Authenticated routes
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    // Main search (operator + admin + viewer — viewer can only view results)
+    // Main search (operator + admin; viewer hanya bisa lihat halaman)
     Route::get('/search',  [SearchController::class, 'index'])->name('search');
     Route::post('/search', [SearchController::class, 'query'])->name('search.query')
-         ->middleware('role:admin,operator');
+         ->middleware(['role:admin,operator', 'throttle:30,1']);
 
     // Search history
     Route::get('/history', [SearchController::class, 'history'])->name('search.history');
@@ -31,11 +31,11 @@ Route::middleware('auth')->group(function () {
 
 // Admin-only routes
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/users',          [AdminController::class, 'users'])->name('users');
-    Route::get('/users/create',   [AdminController::class, 'createUser'])->name('users.create');
-    Route::post('/users',         [AdminController::class, 'storeUser'])->name('users.store');
-    Route::get('/users/{id}/edit',[AdminController::class, 'editUser'])->name('users.edit');
-    Route::put('/users/{id}',     [AdminController::class, 'updateUser'])->name('users.update');
-    Route::delete('/users/{id}',  [AdminController::class, 'deleteUser'])->name('users.delete');
-    Route::get('/logs',           [AdminController::class, 'logs'])->name('logs');
+    Route::get('/users',               [AdminController::class, 'users'])->name('users');
+    Route::get('/users/create',        [AdminController::class, 'createUser'])->name('users.create');
+    Route::post('/users',              [AdminController::class, 'storeUser'])->name('users.store');
+    Route::get('/users/{user}/edit',   [AdminController::class, 'editUser'])->name('users.edit');
+    Route::put('/users/{user}',        [AdminController::class, 'updateUser'])->name('users.update');
+    Route::delete('/users/{user}',     [AdminController::class, 'destroyUser'])->name('users.destroy');
+    Route::get('/logs',                [AdminController::class, 'logs'])->name('logs');
 });

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class LoginAttempt extends Model
 {
-    public $timestamps = false;
+    const UPDATED_AT = null;
 
     protected $fillable = [
         'username', 'ip_address', 'user_agent', 'success',
@@ -16,12 +16,4 @@ class LoginAttempt extends Model
         'success'    => 'boolean',
         'created_at' => 'datetime',
     ];
-
-    protected static function boot()
-    {
-        parent::boot();
-        static::creating(function ($model) {
-            $model->created_at = now();
-        });
-    }
 }

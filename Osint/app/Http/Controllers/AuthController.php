@@ -10,10 +10,6 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    // Max failed attempts before temporary lock (per IP per 15 minutes)
-    private const MAX_ATTEMPTS = 5;
-    private const LOCKOUT_MINUTES = 15;
-
     public function showLogin()
     {
         return view('auth.login');
@@ -26,19 +22,26 @@ class AuthController extends Controller
             'password' => 'required|string|min:6',
         ]);
 
-        $ip = $request->ip();
-        $username = $request->username;
+        $ip             = $request->ip();
+        $username       = $request->username;
+        $maxAttempts    = config('leakosint.max_attempts');
+        $lockoutMinutes = config('leakosint.lockout_minutes');
 
-        // Brute-force protection: check recent failed attempts from this IP
-        $recentFails = LoginAttempt::where('ip_address', $ip)
-            ->where('success', 0)
-            ->where('created_at', '>=', now()->subMinutes(self::LOCKOUT_MINUTES))
+        // Brute-force protection: lock per-IP dan per-username
+        $failsByIp = LoginAttempt::where('ip_address', $ip)
+            ->where('success', false)
+            ->where('created_at', '>=', now()->subMinutes($lockoutMinutes))
             ->count();
 
-        if ($recentFails >= self::MAX_ATTEMPTS) {
+        $failsByUser = LoginAttempt::where('username', $username)
+            ->where('success', false)
+            ->where('created_at', '>=', now()->subMinutes($lockoutMinutes))
+            ->count();
+
+        if ($failsByIp >= $maxAttempts || $failsByUser >= $maxAttempts) {
             $this->logAttempt($username, $ip, $request->userAgent(), false);
             return back()->withErrors([
-                'username' => "Terlalu banyak percobaan login gagal. Coba lagi dalam " . self::LOCKOUT_MINUTES . " menit.",
+                'username' => "Terlalu banyak percobaan login gagal. Coba lagi dalam {$lockoutMinutes} menit.",
             ])->withInput(['username' => $username]);
         }
 
@@ -61,7 +64,6 @@ class AuthController extends Controller
             ])->withInput(['username' => $username]);
         }
 
-        // Successful login
         Auth::login($user, $request->boolean('remember'));
         $this->logAttempt($username, $ip, $request->userAgent(), true);
 

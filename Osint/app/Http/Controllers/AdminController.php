@@ -25,12 +25,12 @@ class AdminController extends Controller
     public function storeUser(Request $request)
     {
         $request->validate([
-            'name'       => 'required|string|max:255',
-            'username'   => 'required|string|max:100|unique:users',
-            'email'      => 'required|email|unique:users',
-            'password'   => ['required', Password::min(8)->mixedCase()->numbers()],
-            'role'       => 'required|in:admin,operator,viewer',
-            'api_token'  => 'nullable|string|max:100',
+            'name'                  => 'required|string|max:255',
+            'username'              => 'required|string|max:100|unique:users',
+            'email'                 => 'required|email|unique:users',
+            'password'              => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
+            'role'                  => 'required|in:admin,operator,viewer',
+            'api_token'             => 'nullable|string|max:100',
         ]);
 
         User::create([
@@ -39,28 +39,25 @@ class AdminController extends Controller
             'email'     => $request->email,
             'password'  => Hash::make($request->password),
             'role'      => $request->role,
-            'api_token' => $request->api_token,
+            'api_token' => $request->api_token ?: null,
             'is_active' => true,
         ]);
 
         return redirect()->route('admin.users')->with('success', 'User berhasil dibuat.');
     }
 
-    public function editUser(int $id)
+    public function editUser(User $user)
     {
-        $user = User::findOrFail($id);
         return view('admin.user-form', compact('user'));
     }
 
-    public function updateUser(Request $request, int $id)
+    public function updateUser(Request $request, User $user)
     {
-        $user = User::findOrFail($id);
-
         $request->validate([
             'name'      => 'required|string|max:255',
-            'username'  => 'required|string|max:100|unique:users,username,' . $id,
-            'email'     => 'required|email|unique:users,email,' . $id,
-            'password'  => ['nullable', Password::min(8)->mixedCase()->numbers()],
+            'username'  => 'required|string|max:100|unique:users,username,' . $user->id,
+            'email'     => 'required|email|unique:users,email,' . $user->id,
+            'password'  => ['nullable', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
             'role'      => 'required|in:admin,operator,viewer',
             'is_active' => 'boolean',
             'api_token' => 'nullable|string|max:100',
@@ -72,7 +69,7 @@ class AdminController extends Controller
             'email'     => $request->email,
             'role'      => $request->role,
             'is_active' => $request->boolean('is_active'),
-            'api_token' => $request->api_token,
+            'api_token' => $request->api_token ?: null,
         ];
 
         if ($request->filled('password')) {
@@ -84,20 +81,20 @@ class AdminController extends Controller
         return redirect()->route('admin.users')->with('success', 'User berhasil diperbarui.');
     }
 
-    public function deleteUser(int $id)
+    public function destroyUser(User $user)
     {
-        if ($id === auth()->id()) {
+        if ($user->id === auth()->id()) {
             return back()->withErrors(['error' => 'Tidak bisa menghapus akun sendiri.']);
         }
 
-        User::findOrFail($id)->delete();
+        $user->delete();
         return redirect()->route('admin.users')->with('success', 'User berhasil dihapus.');
     }
 
     public function logs()
     {
-        $searchLogs  = SearchLog::with('user')->latest()->paginate(50, ['*'], 'search_page');
-        $loginLogs   = LoginAttempt::latest()->paginate(50, ['*'], 'login_page');
+        $searchLogs = SearchLog::with('user')->latest()->paginate(50, ['*'], 'search_page');
+        $loginLogs  = LoginAttempt::latest()->paginate(50, ['*'], 'login_page');
         return view('admin.logs', compact('searchLogs', 'loginLogs'));
     }
 }

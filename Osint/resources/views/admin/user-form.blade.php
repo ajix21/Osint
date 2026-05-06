@@ -30,10 +30,22 @@
       @error('email') <span class="field-error">{{ $message }}</span> @enderror
     </div>
 
-    <div class="field" style="margin-bottom:16px;">
-      <label>Password {{ $user ? '(kosongkan jika tidak diganti)' : '*' }}</label>
-      <input type="password" name="password" placeholder="Min. 8 karakter, huruf besar, angka" {{ $user ? '' : 'required' }}>
-      @error('password') <span class="field-error">{{ $message }}</span> @enderror
+    <div class="grid-2" style="margin-bottom:16px;">
+      <div class="field">
+        <label>Password {{ $user ? '(kosongkan jika tidak diganti)' : '*' }}</label>
+        <input type="password" name="password"
+               placeholder="Min. 8 karakter, besar, angka, simbol"
+               autocomplete="new-password"
+               {{ $user ? '' : 'required' }}>
+        @error('password') <span class="field-error">{{ $message }}</span> @enderror
+      </div>
+      <div class="field">
+        <label>Konfirmasi Password</label>
+        <input type="password" name="password_confirmation"
+               placeholder="Ulangi password"
+               autocomplete="new-password"
+               {{ $user ? '' : 'required' }}>
+      </div>
     </div>
 
     <div class="grid-2" style="margin-bottom:16px;">
@@ -57,7 +69,10 @@
 
     <div class="field" style="margin-bottom:20px;">
       <label>API Token LeakOSINT (opsional — override token global)</label>
-      <input type="text" name="api_token" value="{{ old('api_token', $user?->api_token) }}" placeholder="token:key">
+      <input type="password"
+             name="api_token"
+             placeholder="{{ $user?->api_token ? '••••••••  (token tersimpan, kosongkan untuk tidak mengubah)' : 'token:key' }}"
+             autocomplete="off">
       @error('api_token') <span class="field-error">{{ $message }}</span> @enderror
     </div>
 
