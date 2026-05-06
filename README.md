@@ -1,162 +1,301 @@
 # LeakOSINT Tool — Laravel Edition
-## Panduan Instalasi Lengkap
+
+> Alat pencarian data OSINT berbasis web dengan sistem autentikasi multi-role, audit log, dan perlindungan API token. Dibangun di atas Laravel 11.
+
+---
+
+## Daftar Isi
+
+- [Persyaratan Sistem](#persyaratan-sistem)
+- [Instalasi](#instalasi)
+- [Konfigurasi `.env`](#konfigurasi-env)
+- [Setup Database](#setup-database)
+- [Menjalankan Aplikasi](#menjalankan-aplikasi)
+- [Akun Default](#akun-default)
+- [Struktur Roles](#struktur-roles)
+- [Fitur Keamanan](#fitur-keamanan)
+- [Manajemen User](#manajemen-user)
+- [Perbandingan dengan Versi Python](#perbandingan-dengan-versi-python)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Persyaratan Sistem
 
-| Komponen | Versi Minimum |
-|----------|---------------|
-| PHP      | 8.2+          |
-| MySQL    | 5.7+ / MariaDB 10.3+ |
-| Composer | 2.x           |
-| PHP Extensions | `pdo_mysql`, `curl`, `mbstring`, `openssl`, `json` |
+Pastikan semua komponen berikut sudah terinstal sebelum memulai.
 
----
+| Komponen        | Versi Minimum              |
+|-----------------|----------------------------|
+| PHP             | 8.2+                       |
+| MySQL / MariaDB | 5.7+ / 10.3+               |
+| Composer        | 2.x                        |
+| PHP Extensions  | `pdo_mysql`, `curl`, `mbstring`, `openssl`, `json` |
 
-## Cara 1: Install Langsung (Recommended)
+Untuk mengecek versi yang terinstal:
 
 ```bash
-# 1. Install Laravel fresh di folder ini
-composer create-project laravel/laravel leakosint-app "^11.0"
-cd leakosint-app
-
-# 2. Copy file-file dari folder leakosint-laravel ke folder ini:
-#    - app/Http/Controllers/AuthController.php
-#    - app/Http/Controllers/SearchController.php
-#    - app/Http/Controllers/AdminController.php
-#    - app/Http/Middleware/CheckRole.php
-#    - app/Models/User.php, SearchLog.php, LoginAttempt.php
-#    - config/leakosint.php
-#    - routes/web.php
-#    - resources/views/ (semua folder)
-#    - database/migrations/ (3 file)
-#    - database/seeders/DatabaseSeeder.php
-#    - bootstrap/app.php (replace)
+php -v
+composer -V
+mysql --version
 ```
 
 ---
 
-## Cara 2: Langsung dari folder ini
+## Instalasi
+
+### Langkah 1 — Clone Repository
 
 ```bash
-# 1. Masuk ke folder
-cd "D:\Project Bot - Work\Leak Osint\leakosint-laravel"
+git clone https://github.com/ajix21/osint.git
+cd osint
+```
 
-# 2. Install dependencies
+### Langkah 2 — Install Dependencies PHP
+
+```bash
 composer install
+```
 
-# 3. Salin .env
+> Jika ada peringatan tentang versi PHP atau ekstensi yang hilang, pastikan ekstensi `pdo_mysql`, `curl`, `mbstring`, `openssl`, dan `json` sudah diaktifkan di `php.ini`.
+
+### Langkah 3 — Salin File Environment
+
+**Linux / macOS:**
+```bash
+cp .env.example .env
+```
+
+**Windows:**
+```cmd
 copy .env.example .env
+```
 
-# 4. Generate app key
+### Langkah 4 — Generate Application Key
+
+```bash
 php artisan key:generate
 ```
 
 ---
 
-## Konfigurasi Database
+## Konfigurasi `.env`
 
-### Opsi A — Import SQL langsung
-```sql
--- Di MySQL/HeidiSQL/phpMyAdmin:
-SOURCE leakosint.sql;
+Buka file `.env` dan sesuaikan nilai-nilai berikut:
+
+```env
+# ───────────── Aplikasi ─────────────
+APP_NAME="LeakOSINT Tool"
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+# ───────────── Database ─────────────
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=leakosint_db
+DB_USERNAME=root
+DB_PASSWORD=password_anda
+
+# ───────────── API LeakOSINT ────────
+# Dapatkan token dari: https://leakosint.com
+LEAKOSINT_API_TOKEN=your_api_token_here
 ```
 
-### Opsi B — Migrasi Laravel (recommended)
-```bash
-# Edit .env terlebih dahulu:
-# DB_DATABASE=leakosint_db
-# DB_USERNAME=root
-# DB_PASSWORD=password_anda
+> **Penting:** Jangan pernah commit file `.env` ke repository. File ini sudah ada di `.gitignore`.
 
+---
+
+## Setup Database
+
+### Buat Database Baru
+
+Masuk ke MySQL dan buat database:
+
+```sql
+CREATE DATABASE leakosint_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+### Opsi A — Migrasi Laravel (Direkomendasikan)
+
+Jalankan migrasi dan seeder untuk membuat tabel dan data awal:
+
+```bash
 php artisan migrate
 php artisan db:seed
 ```
 
----
+### Opsi B — Import SQL Manual
 
-## Konfigurasi .env
+Jika ingin menggunakan file SQL yang sudah ada:
 
-```env
-# Wajib diisi:
-APP_URL=http://localhost:8000
-DB_HOST=127.0.0.1
-DB_DATABASE=leakosint_db
-DB_USERNAME=root
-DB_PASSWORD=
-
-# API Token LeakOSINT (isi dengan token Anda):
-LEAKOSINT_API_TOKEN=6330301949:5yJCvg0Z
+```bash
+# Via command line
+mysql -u root -p leakosint_db < leakosint.sql
 ```
+
+Atau import melalui phpMyAdmin / HeidiSQL dengan membuka file `leakosint.sql`.
 
 ---
 
 ## Menjalankan Aplikasi
 
+### Development Server
+
 ```bash
 php artisan serve
-# Buka: http://localhost:8000
+```
+
+Aplikasi akan berjalan di: **http://localhost:8000**
+
+### Konfigurasi Port Kustom (Opsional)
+
+```bash
+php artisan serve --port=8080
+```
+
+### Optimasi untuk Production
+
+```bash
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
 ```
 
 ---
 
 ## Akun Default
 
-| Username   | Password        | Role     | Dapat Cari? |
-|------------|-----------------|----------|-------------|
-| `admin`    | `Admin@12345`   | Admin    | Ya          |
-| `operator` | `Operator@12345`| Operator | Ya          |
-| `viewer`   | `Viewer@12345`  | Viewer   | Tidak        |
+Setelah menjalankan seeder, akun berikut tersedia untuk login:
 
-> **PENTING:** Ganti semua password setelah login pertama!
+| Username   | Password          | Role     | Dapat Mencari |
+|------------|-------------------|----------|:-------------:|
+| `admin`    | `Admin@12345`     | Admin    | ✓             |
+| `operator` | `Operator@12345`  | Operator | ✓             |
+| `viewer`   | `Viewer@12345`    | Viewer   | ✗             |
+
+> **Penting:** Segera ganti semua password default setelah login pertama kali melalui halaman profil atau Admin Panel.
 
 ---
 
 ## Struktur Roles
 
-| Role     | Login | Cari | History Sendiri | History Semua | Admin Panel |
-|----------|-------|------|-----------------|---------------|-------------|
-| Admin    | ✓     | ✓    | ✓               | ✓             | ✓           |
-| Operator | ✓     | ✓    | ✓               | ✗             | ✗           |
-| Viewer   | ✓     | ✗    | ✓               | ✗             | ✗           |
+Aplikasi ini menggunakan tiga level akses:
+
+| Kemampuan              | Admin | Operator | Viewer |
+|------------------------|:-----:|:--------:|:------:|
+| Login                  | ✓     | ✓        | ✓      |
+| Melakukan pencarian    | ✓     | ✓        | ✗      |
+| Lihat history sendiri  | ✓     | ✓        | ✓      |
+| Lihat semua history    | ✓     | ✗        | ✗      |
+| Akses Admin Panel      | ✓     | ✗        | ✗      |
+| Manajemen user         | ✓     | ✗        | ✗      |
 
 ---
 
 ## Fitur Keamanan
 
-- **Brute-force protection**: 5 kali gagal = lock 15 menit per IP
-- **Audit log**: Semua login attempt tercatat (berhasil/gagal)
-- **Search log**: Semua query tercatat dengan user & IP
-- **CSRF protection**: Semua form dilindungi token CSRF
-- **API token tersembunyi**: Token tidak pernah terekspos ke frontend
-- **Per-user API token**: Admin bisa set token berbeda per user
-- **Session regeneration**: Token sesi diperbarui setelah login
+| Fitur                     | Deskripsi                                                     |
+|---------------------------|---------------------------------------------------------------|
+| Brute-force protection    | 5 percobaan gagal akan mengunci akses selama 15 menit per IP |
+| Audit log login           | Setiap percobaan login (berhasil maupun gagal) dicatat       |
+| Search log                | Semua query pencarian dicatat beserta user dan IP address    |
+| CSRF protection           | Seluruh form dilindungi token CSRF bawaan Laravel            |
+| API token tersembunyi     | Token API tidak pernah dikirim ke frontend / browser         |
+| Per-user API token        | Admin dapat mengatur token API berbeda untuk tiap user       |
+| Session regeneration      | Token sesi diperbarui otomatis setiap setelah login          |
 
 ---
 
-## Perbedaan vs Versi Python
+## Manajemen User
 
-| Fitur | Python Flask | Laravel PHP |
-|-------|-------------|-------------|
-| Perlu jalankan server terpisah | Ya (`python app.py`) | **Tidak** |
-| API Token di HTML (terekspos) | Ya | **Tidak** |
-| Login system | Tidak ada | **Ada** |
-| Multi-user | Tidak ada | **Ada** |
-| Audit log | Tidak ada | **Ada** |
-| Export PDF/Excel | Ya | **Ya** |
+### Tambah User via Admin Panel
 
----
+Akses halaman pembuatan user melalui browser:
 
-## Tambah User Baru
-
-Melalui Admin Panel:
 ```
 http://localhost:8000/admin/users/create
 ```
 
-Atau via artisan (quick):
+### Tambah User via Artisan Tinker
+
+Untuk pembuatan user secara cepat melalui terminal:
+
 ```bash
 php artisan tinker
->>> App\Models\User::create(['name'=>'Nama','username'=>'user1','email'=>'u@a.com','password'=>Hash::make('Pass@123'),'role'=>'operator','is_active'=>true]);
 ```
+
+Kemudian jalankan perintah berikut di prompt tinker:
+
+```php
+App\Models\User::create([
+    'name'      => 'Nama Lengkap',
+    'username'  => 'username_baru',
+    'email'     => 'email@domain.com',
+    'password'  => Hash::make('Password@123'),
+    'role'      => 'operator',   // 'admin', 'operator', atau 'viewer'
+    'is_active' => true,
+]);
+```
+
+---
+
+## Perbandingan dengan Versi Python
+
+| Fitur                       | Python Flask | Laravel PHP    |
+|-----------------------------|:------------:|:--------------:|
+| Server terpisah             | Ya           | **Tidak**      |
+| API Token terekspos di HTML | Ya           | **Tidak**      |
+| Sistem login                | Tidak ada    | **Ada**        |
+| Multi-user & role           | Tidak ada    | **Ada**        |
+| Audit log                   | Tidak ada    | **Ada**        |
+| Brute-force protection      | Tidak ada    | **Ada**        |
+| Export PDF / Excel          | Ya           | **Ya**         |
+
+---
+
+## Troubleshooting
+
+### Error: `php_pdo_mysql` extension not found
+
+Aktifkan ekstensi di `php.ini`:
+```ini
+extension=pdo_mysql
+```
+Kemudian restart web server.
+
+### Error: `SQLSTATE[HY000] [2002] Connection refused`
+
+Pastikan layanan MySQL sedang berjalan:
+```bash
+# Linux (systemd)
+sudo systemctl start mysql
+
+# macOS (Homebrew)
+brew services start mysql
+```
+
+### Error: `No application encryption key has been specified`
+
+Jalankan ulang:
+```bash
+php artisan key:generate
+```
+
+### Halaman tampil kosong / error 500
+
+Periksa log error Laravel:
+```bash
+tail -f storage/logs/laravel.log
+```
+
+Pastikan permission folder `storage` dan `bootstrap/cache` sudah benar:
+```bash
+chmod -R 775 storage bootstrap/cache
+```
+
+---
+
+## Lisensi
+
+Proyek ini dilisensikan di bawah [MIT License](LICENSE).
