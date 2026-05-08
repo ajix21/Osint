@@ -45,8 +45,16 @@ class SearchController extends Controller
         }
 
         try {
+            // LeakOSINT API hanya menerima request dari Python client.
+            // Header di bawah meniru python-requests library agar tidak ditolak.
             $response = Http::timeout(30)
-                ->withHeaders(['Content-Type' => 'application/json'])
+                ->withHeaders([
+                    'User-Agent'      => 'python-requests/2.31.0',
+                    'Accept'          => '*/*',
+                    'Accept-Encoding' => 'gzip, deflate',
+                    'Connection'      => 'keep-alive',
+                    'Content-Type'    => 'application/json',
+                ])
                 ->post(config('leakosint.api_url'), $payload);
 
             $data = $response->json();
