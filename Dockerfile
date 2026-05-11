@@ -1,40 +1,46 @@
-FROM php:8.4-fpm-alpine
+# Menggunakan PHP 8.4 dengan Apache sebagai web server
+FROM php:8.4-apache
 
-# Install dependencies
-RUN apk add --no-cache \
-    nginx \
-    supervisor \
-    curl \
-    zip \
-    unzip \
+# Menginstal dependensi sistem yang dibutuhkan Laravel
+RUN apt-get update && apt-get install -y \
     git \
-    mysql-client \
-    $PHPIZE_DEPS \
-    && docker-php-ext-install pdo pdo_mysql opcache \
-    && docker-php-ext-enable opcache
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip
 
-# Install Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# Membersihkan cache apt
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Menginstal ekstensi PHP (pdo_mysql dan mbstring). 
+# Catatan: curl, openssl, dan json sudah otomatis bawaan dari base image ini.
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+
+# Mengaktifkan mod_rewrite Apache (wajib untuk routing Laravel)
+RUN a2enmod rewrite
+
+# Mengubah DocumentRoot Apache ke folder /public milik Laravel
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+# Menginstal Composer versi terbaru (2.x)
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Menetapkan direktori kerja di dalam container
 WORKDIR /var/www/html
 
-# Copy project files
+# Menyalin seluruh file project ke dalam container
 COPY . .
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Menginstal dependensi PHP via Composer
+RUN composer install --no-interaction --optimize-autoloader --no-dev
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html/storage \
-    && chmod -R 755 /var/www/html/bootstrap/cache
+# Mengatur hak akses agar Laravel bisa menulis log dan cache
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Copy config files
-COPY docker/nginx.conf /etc/nginx/nginx.conf
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY docker/php.ini /usr/local/etc/php/conf.d/custom.ini
-COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
+# Mengekspos port 80
 EXPOSE 80
